@@ -1,0 +1,102 @@
+SELECT * 
+FROM PortfolioProject..CovidDeaths
+WHERE location = 'United States'
+
+SELECT *
+FROM PortfolioProject..CovidVaccinations
+WHERE location = 'United States'
+
+---------------------------------------------------------------------------------------------------------
+-- Total World Population Vaccinated ( at least one dose)
+WITH CTE_WorldDat as(
+SELECT dea.location,population,max(cast(total_vaccinations as numeric)) as TotalVaccinated
+FROM PortfolioProject..CovidVaccinations as vac
+JOIN PortfolioProject..CovidDeaths as dea
+	ON dea.location=vac.location
+	and dea.date = vac.date
+
+WHERE dea.continent is not null
+GROUP BY dea.location,population
+--ORDER BY population DESC
+)
+
+SELECT SUM(population) as World_Population, SUM(TotalVaccinated) as Total_Vaccinated,
+SUM(TotalVaccinated)/SUM(population) * 100 as Percent_World_Vaccinated
+FROM CTE_WorldDat
+
+
+------------------------------------------------------------------------------------------------------------
+-- Vaccination Percentage by Country ( at least one dose)
+SELECT dea.location, dea.population,
+MAX(CAST(people_vaccinated as numeric)) as Total_Vaccinated,
+MAX(CAST(people_vaccinated as numeric)/dea.population * 100) as PercentVaccinated
+FROM PortfolioProject..CovidVaccinations as vac
+JOIN PortfolioProject..CovidDeaths as dea
+	ON dea.location=vac.location
+	and dea.date = vac.date
+
+WHERE dea.continent is not null
+
+
+GROUP BY dea.location, dea.population
+ORDER BY PercentVaccinated DESC
+
+
+---------------------------------------------------------------------------------------------------------------
+-- Population Fully vaccinated per country
+SELECT dea.location, dea.population,
+MAX(CAST(people_fully_vaccinated as numeric)) as Total_Fully_Vaccinated,
+MAX(CAST(people_fully_vaccinated as numeric)/dea.population * 100) as PercentVaccinated
+FROM PortfolioProject..CovidVaccinations as vac
+JOIN PortfolioProject..CovidDeaths as dea
+	ON dea.location=vac.location
+	and dea.date = vac.date
+
+WHERE dea.continent is not null
+
+GROUP BY dea.location, dea.population
+ORDER BY PercentVaccinated DESC
+
+---------------------------------------------------------------------------------------------------------------
+-- Corellation between Vaccination and Deaths ( at least one dose)
+
+SELECT dea.location, dea.date,
+MAX(CAST(people_vaccinated as numeric)) as Total_Vaccinated,
+MAX(CAST(people_vaccinated as numeric)/dea.population * 100) as PercentVaccinated
+FROM PortfolioProject..CovidDeaths as dea
+JOIN PortfolioProject..CovidVaccinations as vac
+	ON dea.location=vac.location
+	and dea.date = vac.date
+
+WHERE dea.continent is not null
+and dea.location = 'Australia'
+
+
+GROUP BY dea.location, dea.population, dea.date
+ORDER BY dea.location, dea.date DESC
+
+---------------------------------------------------------------------------------------------------------------
+-- Percentage of Total Vaccination ( One, Fully, None)
+
+WITH Vax as(
+SELECT dea.location, dea.population,
+MAX(CAST(people_vaccinated as numeric)) as Total_Vaccinated,
+MAX(CAST(people_vaccinated as numeric)/dea.population * 100) as PercentVaccinated,
+MAX(CAST(people_fully_vaccinated as numeric)) as Total_Fully_Vaccinated,
+MAX(CAST(people_fully_vaccinated as numeric)/dea.population * 100) as PercentFullyVaccinated
+FROM PortfolioProject..CovidVaccinations as vac
+JOIN PortfolioProject..CovidDeaths as dea
+	ON dea.location=vac.location
+	and dea.date = vac.date
+
+WHERE dea.continent is not null
+
+GROUP BY dea.location, dea.population
+
+)
+
+SELECT location,PercentVaccinated, PercentFullyVaccinated,
+PercentVaccinated-PercentFullyVaccinated as One_Dose,
+100-PercentVaccinated as Not_Vaccinated
+FROM Vax
+ORDER BY PercentFullyVaccinated DESC
